@@ -1,11 +1,10 @@
-mod build;
+mod build_instructions;
 mod cli;
-mod pack;
+mod utils;
 use anyhow::Result;
-use build::build;
 use clap::Parser;
 use cli::Cli;
-use pack::pack;
+use utils::{build::build, pack::pack};
 
 fn main() -> Result<()> {
     let cliargs = Cli::parse();
