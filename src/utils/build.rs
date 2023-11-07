@@ -2,7 +2,7 @@ use std::{
     fs::{create_dir_all, metadata, set_permissions, File},
     io::prelude::Write,
     os::unix::prelude::PermissionsExt,
-    path::PathBuf,
+    path::{Path, PathBuf},
     thread::sleep,
     time::Duration,
 };
@@ -43,21 +43,23 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
     packages.dedup();
 
     let init_file = init_rootfs(
-        initfile_path.to_path_buf(),
+        initfile_path,
         packages,
         build_instructions.environment.repositories,
     )?;
 
-    run_init(buildroot_path.to_path_buf(), init_file)?;
-
+    // set up env with build dependencies
+    run_init(buildroot_path, init_file.as_path())?;
     fetch_sources(buildhome_path, build_instructions.package.sources);
 
-    let duration = Duration::from_secs(60); // 60 seconds = 1 minute
+    let duration = Duration::from_secs(60);
+
     sleep(duration);
     Ok(PathBuf::new())
 }
 
-fn init_rootfs(buildroot: PathBuf, packages: Vec<String>, repos: Vec<String>) -> Result<PathBuf> {
+fn init_rootfs(buildroot: &Path, packages: Vec<String>, repos: Vec<String>) -> Result<PathBuf> {
+    let mut buildrootPath = buildroot.to_path_buf();
     let mut repo_commands = String::new();
     for repo in repos {
         let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
@@ -79,7 +81,7 @@ fn init_rootfs(buildroot: PathBuf, packages: Vec<String>, repos: Vec<String>) ->
         packages.concat().to_string()
     );
 
-    let initfile = buildroot.join("init.sh");
+    let initfile = buildroot.to_path_buf().join("init.sh");
 
     let mut init = File::create(&initfile)?;
     init.write_all(commands.as_bytes())?;

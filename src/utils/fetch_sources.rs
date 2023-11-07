@@ -1,5 +1,5 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-pub fn fetch_sources(home: PathBuf, sources: Vec<String>) -> Result<()> {}
+pub fn fetch_sources(home: &Path, sources: Vec<String>) -> Result<()> {}

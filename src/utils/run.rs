@@ -1,7 +1,10 @@
 use anyhow::{anyhow, Context, Result};
-use std::{path::PathBuf, process::Command};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
-pub fn run_init(path: PathBuf, file_path: PathBuf) -> Result<()> {
+pub fn run_init(path: &Path, file_path: &Path) -> Result<()> {
     let path = path.to_str().context("path was not kosher")?;
     let init_file = file_path.to_str().context("path was not kosher")?;
     eprintln!("{init_file}");
