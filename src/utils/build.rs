@@ -49,11 +49,11 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
     )?;
 
     // set up env with build dependencies
-    run_init(buildroot_path, init_file.as_path())?;
+    //run_init(buildroot_path, init_file.as_path())?;
     fetch_sources(buildhome_path, build_instructions.package.sources);
 
+    println!("Eepy time😴");
     let duration = Duration::from_secs(60);
-
     sleep(duration);
     Ok(PathBuf::new())
 }

@@ -8,9 +8,9 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.7", features = ["derive"] }
-reqwest = { version = "0.11.22", features = ["rustls-tls", "blocking"] }
+futures = "0.3.29"
+reqwest = { version = "0.11.22", features = ["rustls-tls-native-roots"] }
 #sequoia-openpgp = "1.17.0"
 serde = { version = "1.0.190", features = ["derive"] }
 serde_yaml = "0.9.27"
 tempfile = "3.8.1"
-tokio = { version = "1.33.0", features = ["full"] }
