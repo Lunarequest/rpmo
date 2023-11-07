@@ -13,7 +13,7 @@ use tempfile::TempDir;
 
 use crate::build_instructions::Manifest;
 
-use super::run::run_init;
+use super::{fetch_sources::fetch_sources, run::run_init};
 
 pub fn build(path: PathBuf) -> Result<PathBuf> {
     if !path.exists() {
