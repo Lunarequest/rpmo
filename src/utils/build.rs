@@ -27,7 +27,7 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
     let initfile = TempDir::with_prefix("rpmo-init")?;
     let buildhome = TempDir::with_prefix("rpmo-guest")?;
     create_dir_all(buildroot.path())?;
-    println!("{:#?}", buildroot);
+    let buildhome_path = buildhome.path();
     let buildroot_path = buildroot.path();
     let initfile_path = initfile.path();
 
@@ -49,6 +49,9 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
     )?;
 
     run_init(buildroot_path.to_path_buf(), init_file)?;
+
+    fetch_sources(buildhome_path, build_instructions.package.sources);
+
     let duration = Duration::from_secs(60); // 60 seconds = 1 minute
     sleep(duration);
     Ok(PathBuf::new())
