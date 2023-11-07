@@ -7,7 +7,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Debug, Parser)]
 #[clap(author="Luna D Dragon",
         version=VERSION,
-        about="A simple unifide kernel image generator",
+        about="A tool to create rpms from yaml",
         long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
