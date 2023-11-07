@@ -49,7 +49,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     )?;
 
     // set up env with build dependencies
-    //run_init(buildroot_path, init_file.as_path())?;
+    run_init(buildroot_path, init_file.as_path())?;
     fetch_sources(buildhome_path, build_instructions.package.sources).await?;
 
     // FOR DEBUGGING
