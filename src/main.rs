@@ -6,7 +6,8 @@ use clap::Parser;
 use cli::Cli;
 use utils::{build::build, pack::pack};
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cliargs = Cli::parse();
     match cliargs.command {
         cli::CliCommand::Build { path } => {

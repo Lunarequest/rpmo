@@ -14,3 +14,4 @@ reqwest = { version = "0.11.22", features = ["rustls-tls-native-roots"] }
 serde = { version = "1.0.190", features = ["derive"] }
 serde_yaml = "0.9.27"
 tempfile = "3.8.1"
+tokio = "1.33.0"

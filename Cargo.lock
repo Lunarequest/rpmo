@@ -791,6 +791,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]
