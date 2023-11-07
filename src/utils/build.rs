@@ -59,7 +59,6 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
 }
 
 fn init_rootfs(buildroot: &Path, packages: Vec<String>, repos: Vec<String>) -> Result<PathBuf> {
-    let mut buildrootPath = buildroot.to_path_buf();
     let mut repo_commands = String::new();
     for repo in repos {
         let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
