@@ -15,7 +15,7 @@ use crate::build_instructions::Manifest;
 
 use super::{fetch_sources::fetch_sources, run::run_init};
 
-pub fn build(path: PathBuf) -> Result<PathBuf> {
+pub async fn build(path: PathBuf) -> Result<PathBuf> {
     if !path.exists() {
         return Err(anyhow!("no such file or directory {}", path.display()));
     }
@@ -50,11 +50,13 @@ pub fn build(path: PathBuf) -> Result<PathBuf> {
 
     // set up env with build dependencies
     //run_init(buildroot_path, init_file.as_path())?;
-    fetch_sources(buildhome_path, build_instructions.package.sources);
+    fetch_sources(buildhome_path, build_instructions.package.sources).await?;
 
+    // FOR DEBUGGING
     println!("Eepy time😴");
     let duration = Duration::from_secs(60);
     sleep(duration);
+
     Ok(PathBuf::new())
 }
 
