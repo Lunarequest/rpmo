@@ -68,7 +68,7 @@ fn init_rootfs(buildroot: PathBuf, packages: Vec<String>, repos: Vec<String>) ->
     }
     let commands = format!(
         "
-        set -ex
+        #!/bin/bash -x
         {repo_commands}
         zypper --root /newroot in  --no-recommends -y -t pattern devel_basis
         zypper --root /newroot in --no-recommends -y {}
