@@ -1,19 +1,28 @@
 use std::{
+    env::consts::ARCH,
     fs::{create_dir_all, metadata, set_permissions, File},
     io::prelude::Write,
     os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
+    process::Command,
     thread::sleep,
     time::Duration,
 };
 
 use anyhow::{anyhow, Result};
+use serde::Serialize;
 use serde_yaml::from_reader;
 use tempfile::TempDir;
-
-use crate::build_instructions::Manifest;
+use tera::{Context, Tera};
 
 use super::{fetch_sources::fetch_sources, run::run_init};
+use crate::build_instructions::{Manifest, Pipeline};
+
+#[derive(Debug, Serialize)]
+pub struct Target {
+    destdir: String,
+    arch: String,
+}
 
 pub async fn build(path: PathBuf) -> Result<PathBuf> {
     if !path.exists() {
@@ -31,26 +40,36 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     let buildroot_path = buildroot.path();
     let initfile_path = initfile.path();
 
-    let mut packages = match build_instructions.package.dependecies {
+    let mut packages = match build_instructions.package.dependecies.clone() {
         Some(deps) => {
             let mut deps = deps.clone();
-            let mut runtime = build_instructions.environment.packages;
+            let mut runtime = build_instructions.environment.packages.clone();
             deps.append(&mut runtime);
             deps
         }
-        None => build_instructions.environment.packages,
+        None => build_instructions.environment.packages.clone(),
     };
     packages.dedup();
 
-    let init_file = init_rootfs(
+    let init_file = init_rootfs_commands(
         initfile_path,
         packages,
-        build_instructions.environment.repositories,
+        build_instructions.environment.repositories.clone(),
     )?;
 
     // set up env with build dependencies
-    run_init(buildroot_path, init_file.as_path())?;
-    fetch_sources(buildhome_path, build_instructions.package.sources).await?;
+    run_init(buildroot_path, &init_file)?;
+    fetch_sources(buildhome_path, &build_instructions.package.sources).await?;
+
+    let piplines = build_instructions.pipeline.clone();
+    for pipline in piplines {
+        spawn_pipeline_run(
+            buildroot_path.to_path_buf(),
+            buildhome_path.to_path_buf(),
+            pipline,
+            build_instructions.clone(),
+        )?;
+    }
 
     // FOR DEBUGGING
     println!("Eepy time😴");
@@ -60,7 +79,58 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     Ok(PathBuf::new())
 }
 
-fn init_rootfs(buildroot: &Path, packages: Vec<String>, repos: Vec<String>) -> Result<PathBuf> {
+fn spawn_pipeline_run(
+    root: PathBuf,
+    home: PathBuf,
+    pipline: Pipeline,
+    manifest: Manifest,
+) -> Result<()> {
+    let buildroot = root.to_string_lossy().to_string();
+    let buildhome = home.to_string_lossy().to_string();
+    println!("{buildhome}");
+    let name = &pipline.name.replace(" ", "");
+    let target = Target {
+        destdir: "/home/build/out".to_string(),
+        arch: ARCH.to_string(),
+    };
+
+    let mut tera = Tera::default();
+    tera.add_raw_template(name, &pipline.runs)?;
+    let mut context = Context::new();
+    context.insert("manifest", &manifest);
+    context.insert("targets", &target);
+    let run = tera.render(name, &context)?;
+
+    let pipeline_file = home.join(format!("{}.sh", name));
+    let mut file = File::create(pipeline_file)?;
+    file.write_all(run.as_bytes())?;
+
+    #[rustfmt::skip]
+    let status = Command::new("bwrap").args(vec![
+        "--bind", &buildroot, "/",
+        "--bind", &buildhome, "/home/build",
+        "--unshare-pid",
+        "--dev", "/dev",
+        "--proc", "/proc",
+        "--chdir", "/home/build",
+        "--clearenv", "--new-session",
+        "--setenv", "SOURCE_DATE_EPOCH", "0",
+        "--setenv", "HOME", "/home/build",
+        "/bin/bash", "-x", &format!("{}.sh", name)
+    ]).status()?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        return Err(anyhow!("build failure"));
+    }
+}
+
+fn init_rootfs_commands(
+    buildroot: &Path,
+    packages: Vec<String>,
+    repos: Vec<String>,
+) -> Result<PathBuf> {
     let mut repo_commands = String::new();
     for repo in repos {
         let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
@@ -78,8 +148,9 @@ fn init_rootfs(buildroot: &Path, packages: Vec<String>, repos: Vec<String>) -> R
         {repo_commands}
         zypper --root /newroot in  --no-recommends -y -t pattern devel_basis
         zypper --root /newroot in --no-recommends -y {}
+        mkdir -p /home/build/out
         ",
-        packages.concat().to_string()
+        packages.join(" ").to_string()
     );
 
     let initfile = buildroot.to_path_buf().join("init.sh");

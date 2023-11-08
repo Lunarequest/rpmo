@@ -1,26 +1,26 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Manifest {
     pub package: Package,
     pub environment: Environment,
     pub pipeline: Vec<Pipeline>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Environment {
     pub repositories: Vec<String>,
     pub keyring: Option<Vec<String>>,
     pub packages: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Pipeline {
     pub name: String,
     pub runs: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Package {
     pub name: String,
     pub version: String,
@@ -31,7 +31,7 @@ pub struct Package {
     pub sources: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CopyRight {
     pub license: String,
     pub paths: Vec<String>,
