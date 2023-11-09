@@ -1,10 +1,7 @@
 use anyhow::{anyhow, Context, Result};
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{path::Path, process::Command};
 
-pub fn run_init(path: &Path, file_path: &PathBuf) -> Result<()> {
+pub fn run_init(path: &Path, file_path: &Path) -> Result<()> {
     let path = path.to_str().context("path was not kosher")?;
     let init_file = file_path.to_str().context("path was not kosher")?;
     eprintln!("{init_file}");
@@ -28,6 +25,6 @@ pub fn run_init(path: &Path, file_path: &PathBuf) -> Result<()> {
     if status.success() {
         Ok(())
     } else {
-        return Err(anyhow!("init of workspace failed"));
+        Err(anyhow!("init of workspace failed"))
     }
 }

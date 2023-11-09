@@ -11,7 +11,7 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
         if license.is_empty() {
             license = license + &copyright.license;
         } else {
-            license = license + " AND ";
+            license += " AND ";
             license = license + &copyright.license;
         }
     }
@@ -37,7 +37,7 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
         &manifest.package.name,
         &manifest.package.version,
         &license,
-        &ARCH,
+        ARCH,
         &manifest.package.description,
     )
     .compression(CompressionWithLevel::Zstd(19))

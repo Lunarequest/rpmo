@@ -5,7 +5,7 @@ use std::path::Path;
 
 use anyhow::Result;
 
-pub async fn fetch_sources(buildhome: &Path, sources: &Vec<String>) -> Result<()> {
+pub async fn fetch_sources(buildhome: &Path, sources: &[String]) -> Result<()> {
     for sauce in sources.iter() {
         fetch_a_source(buildhome, sauce.as_str()).await?;
     }
@@ -31,7 +31,7 @@ async fn fetch_a_source(buildhome: &Path, url: &str) -> Result<()> {
     let mut fwriter = BufWriter::new(file);
 
     while let Some(chunk) = resp.chunk().await? {
-        fwriter.write(&chunk)?;
+        fwriter.write_all(&chunk)?;
     }
     Ok(())
 }

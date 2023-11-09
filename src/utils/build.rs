@@ -93,7 +93,7 @@ fn spawn_pipeline_run(
     let buildroot = root.to_string_lossy().to_string();
     let buildhome = home.to_string_lossy().to_string();
     println!("{buildhome}");
-    let name = &pipline.name.replace(" ", "");
+    let name = &pipline.name.replace(' ', "");
     let target = Target {
         destdir: "/home/build/out".to_string(),
         arch: ARCH.to_string(),
@@ -128,7 +128,7 @@ fn spawn_pipeline_run(
     if status.success() {
         Ok(())
     } else {
-        return Err(anyhow!("build failure"));
+        Err(anyhow!("build failure"))
     }
 }
 
@@ -156,7 +156,7 @@ fn init_rootfs_commands(
         zypper --root /newroot in --no-recommends -y {}
         mkdir -p /home/build/out
         ",
-        packages.join(" ").to_string()
+        packages.join(" ")
     );
 
     let initfile = buildroot.to_path_buf().join("init.sh");
@@ -165,7 +165,7 @@ fn init_rootfs_commands(
     init.write_all(commands.as_bytes())?;
 
     let mut perms = metadata(&initfile)?.permissions();
-    perms.set_mode(447);
+    perms.set_mode(0o447);
     set_permissions(&initfile, perms)?;
 
     Ok(initfile)
