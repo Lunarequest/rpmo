@@ -16,7 +16,10 @@ use tempfile::TempDir;
 use tera::{Context, Tera};
 
 use super::{fetch_sources::fetch_sources, run::run_init};
-use crate::build_instructions::{Manifest, Pipeline};
+use crate::{
+    build_instructions::{Manifest, Pipeline},
+    utils::pack::pack,
+};
 
 #[derive(Debug, Serialize)]
 pub struct Target {
@@ -71,6 +74,8 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         )?;
     }
 
+    pack(buildhome_path.join("out").to_path_buf(), build_instructions)?;
+
     // FOR DEBUGGING
     println!("Eepy time😴");
     let duration = Duration::from_secs(60);
@@ -116,6 +121,7 @@ fn spawn_pipeline_run(
         "--clearenv", "--new-session",
         "--setenv", "SOURCE_DATE_EPOCH", "0",
         "--setenv", "HOME", "/home/build",
+        "--setenv", "PATH", "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
         "/bin/bash", "-x", &format!("{}.sh", name)
     ]).status()?;
 
