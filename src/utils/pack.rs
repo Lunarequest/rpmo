@@ -15,7 +15,15 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
             license = license + &copyright.license;
         }
     }
-    let mut files = vec![];
+
+    let mut rpm = PackageBuilder::new(
+        &manifest.package.name,
+        &manifest.package.version,
+        &license,
+        ARCH,
+        &manifest.package.description,
+    )
+    .compression(CompressionWithLevel::Zstd(19));
 
     for entry in WalkDir::new(path) {
         match entry {
@@ -24,29 +32,20 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
                 let real_loc = dir_ent.path();
                 let relative_location = real_loc.to_string_lossy().replace(&root, "/");
                 if !real_loc.is_dir() {
-                    files.append(&mut vec![(
-                        real_loc.to_string_lossy().to_string(),
-                        FileOptions::new(relative_location),
-                    )]);
+                    rpm = rpm
+                        .with_file(
+                            real_loc.to_string_lossy().to_string(),
+                            FileOptions::new(relative_location),
+                        )
+                        .unwrap();
                 }
             }
         }
     }
 
-    let rpm = PackageBuilder::new(
-        &manifest.package.name,
-        &manifest.package.version,
-        &license,
-        ARCH,
-        &manifest.package.description,
-    )
-    .compression(CompressionWithLevel::Zstd(19))
-    .with_files(files)
-    .expect("failed to add files")
-    .build()
-    .expect("failed to build rpm");
+    let pkg = rpm.build().expect("failed to build rpm");
 
-    rpm.write_file(format!(
+    pkg.write_file(format!(
         "{}-{}-{}.rpm",
         manifest.package.name, manifest.package.version, manifest.package.release
     ))
