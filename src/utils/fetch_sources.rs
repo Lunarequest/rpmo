@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::Path;
 
 use anyhow::Result;
+use reqwest::Client;
 
 pub async fn fetch_sources(buildhome: &Path, sources: &[String]) -> Result<()> {
     for sauce in sources.iter() {
@@ -13,7 +14,10 @@ pub async fn fetch_sources(buildhome: &Path, sources: &[String]) -> Result<()> {
 }
 
 async fn fetch_a_source(buildhome: &Path, url: &str) -> Result<()> {
-    let mut resp = reqwest::get(url).await.unwrap();
+    let client = Client::builder()
+        .user_agent("Wget/1.14 (linux-gnu)")
+        .build()?;
+    let mut resp = client.get(url).send().await.unwrap();
 
     let mut path = buildhome.to_path_buf();
     let url_last = resp

@@ -1,0 +1,28 @@
+package:
+  name: hello
+  version: 2.12
+  release: 0
+  description: The GNU Hello program produces a familiar, friendly greeting. Yes, this is another implementation of the classic program that prints “Hello, world!” when you run it.
+  copyright:
+    - license: GPL
+      paths:
+        -
+  sources:
+    - https://ftp.gnu.org/gnu/hello/hello-2.12.tar.gz
+environment:
+  repositories:
+    - http://download.opensuse.org/tumbleweed/repo/oss/ repo-oss
+    - http://download.opensuse.org/update/tumbleweed/ repo-updates
+  packages:
+    - gmake
+    - awk
+    - tar
+pipeline:
+  - name: unpack
+    runs: tar xvf {{manifest.package.name}}-{{manifest.package.version}}.tar.gz
+  - name: Configure hello
+    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && ./configure --prefix=/usr
+  - name: make
+    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && make
+  - name: install
+    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && make install DESTDIR=../out

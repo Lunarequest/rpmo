@@ -1,8 +1,27 @@
 use crate::build_instructions::Manifest;
 use anyhow::Result;
-use rpm::{CompressionWithLevel, FileOptions, PackageBuilder};
-use std::{env::consts::ARCH, path::PathBuf};
+use goblin::{error, Object};
+use rpm::{CompressionWithLevel, Dependency, FileOptions, PackageBuilder};
+use std::{env::consts::ARCH, fs::read, path::PathBuf};
 use walkdir::WalkDir;
+
+pub fn analyis_file<'a>(path: PathBuf) -> Vec<String> {
+    let mut deps = Vec::new();
+    if let Ok(buffer) = read(path) {
+        if let Ok(obj) = Object::parse(&buffer) {
+            match obj {
+                Object::Elf(elf) => {
+                    for lib in elf.libraries {
+                        deps.push(lib.into());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    return deps;
+}
 
 pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
     let root = path.to_string_lossy().to_string();

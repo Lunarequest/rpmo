@@ -63,7 +63,6 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     // set up env with build dependencies
     run_init(buildroot_path, &init_file)?;
     fetch_sources(buildhome_path, &build_instructions.package.sources).await?;
-
     let piplines = build_instructions.pipeline.clone();
     for pipline in piplines {
         spawn_pipeline_run(
@@ -118,7 +117,8 @@ fn spawn_pipeline_run(
         "--dev", "/dev",
         "--proc", "/proc",
         "--chdir", "/home/build",
-        "--clearenv", "--new-session",
+        "--clearenv",
+        "--new-session",
         "--setenv", "SOURCE_DATE_EPOCH", "0",
         "--setenv", "HOME", "/home/build",
         "--setenv", "PATH", "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
@@ -152,7 +152,8 @@ fn init_rootfs_commands(
         "
         #!/bin/bash -x
         {repo_commands}
-        zypper --root /newroot in  --no-recommends -y -t pattern devel_basis
+        zypper --root /newroot in --no-recommends -y filesystem udev
+        zypper --root /newroot in --no-recommends -y -t pattern devel_basis
         zypper --root /newroot in --no-recommends -y {}
         mkdir -p /home/build/out
         ",

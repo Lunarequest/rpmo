@@ -9,7 +9,6 @@ pub fn run_init(path: &Path, file_path: &Path) -> Result<()> {
     let status = Command::new("podman")
         .args([
             "run",
-            "--rm",
             "--cap-add",
             "CAP_SYS_CHROOT",
             "-v",
