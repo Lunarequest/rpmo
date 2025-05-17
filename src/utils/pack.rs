@@ -1,18 +1,23 @@
 use crate::build_instructions::Manifest;
 use anyhow::Result;
-use goblin::{error, Object};
+use goblin::Object;
 use rpm::{CompressionWithLevel, Dependency, FileOptions, PackageBuilder};
-use std::{env::consts::ARCH, fs::read, path::PathBuf};
+use std::collections::HashSet;
+use std::{
+    env::consts::ARCH,
+    fs::read,
+    path::{Path, PathBuf},
+};
 use walkdir::WalkDir;
 
-pub fn analyis_file<'a>(path: PathBuf) -> Vec<String> {
-    let mut deps = Vec::new();
+pub fn analyis_file(path: impl AsRef<Path>) -> HashSet<String> {
+    let mut deps = HashSet::new();
     if let Ok(buffer) = read(path) {
         if let Ok(obj) = Object::parse(&buffer) {
             match obj {
                 Object::Elf(elf) => {
                     for lib in elf.libraries {
-                        deps.push(lib.into());
+                        deps.insert(lib.into());
                     }
                 }
                 _ => {}
@@ -23,8 +28,8 @@ pub fn analyis_file<'a>(path: PathBuf) -> Vec<String> {
     return deps;
 }
 
-pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
-    let root = path.to_string_lossy().to_string();
+pub fn pack(path: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Path>> {
+    let root = path.as_ref().to_string_lossy().to_string();
     let mut license = String::new();
     for copyright in manifest.package.copyright {
         if license.is_empty() {
@@ -44,6 +49,8 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
     )
     .compression(CompressionWithLevel::Zstd(19));
 
+    let mut deps: HashSet<String> = HashSet::new();
+
     for entry in WalkDir::new(path) {
         match entry {
             Err(e) => eprintln!("{}", e),
@@ -51,15 +58,21 @@ pub fn pack(path: PathBuf, manifest: Manifest) -> Result<PathBuf> {
                 let real_loc = dir_ent.path();
                 let relative_location = real_loc.to_string_lossy().replace(&root, "/");
                 if !real_loc.is_dir() {
+                    let file_deps = analyis_file(real_loc);
                     rpm = rpm
                         .with_file(
                             real_loc.to_string_lossy().to_string(),
                             FileOptions::new(relative_location),
                         )
                         .unwrap();
+                    deps.extend(file_deps);
                 }
             }
         }
+    }
+
+    for dep in deps {
+        rpm = rpm.requires(Dependency::any(dep));
     }
 
     let pkg = rpm.build().expect("failed to build rpm");

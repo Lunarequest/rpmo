@@ -1,7 +1,7 @@
 use std::{
     env::consts::ARCH,
     fs::{create_dir_all, metadata, set_permissions, File},
-    io::prelude::Write,
+    io::{self, prelude::Write},
     os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
     process::Command,
@@ -12,7 +12,7 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::Serialize;
 use serde_yaml::from_reader;
-use tempfile::TempDir;
+use tempfile::{Builder, TempDir};
 use tera::{Context, Tera};
 
 use super::{fetch_sources::fetch_sources, run::run_init};
@@ -27,6 +27,11 @@ pub struct Target {
     arch: String,
 }
 
+fn new_tmp_dir<T: AsRef<std::ffi::OsStr>>(prefix: T) -> io::Result<TempDir> {
+    let tempdir = Builder::new().prefix(&prefix).tempdir_in("/var/tmp")?;
+    Ok(tempdir)
+}
+
 pub async fn build(path: PathBuf) -> Result<PathBuf> {
     if !path.exists() {
         return Err(anyhow!("no such file or directory {}", path.display()));
@@ -35,9 +40,9 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     let file = File::open(path)?;
     let build_instructions: Manifest = from_reader(file)?;
 
-    let buildroot = TempDir::with_prefix("rpmo-workspace")?;
-    let initfile = TempDir::with_prefix("rpmo-init")?;
-    let buildhome = TempDir::with_prefix("rpmo-guest")?;
+    let buildroot = new_tmp_dir("rpmo-workspace")?;
+    let initfile = new_tmp_dir("rpmo-init")?;
+    let buildhome = new_tmp_dir("rpmo-guest")?;
     create_dir_all(buildroot.path())?;
     let buildhome_path = buildhome.path();
     let buildroot_path = buildroot.path();
@@ -148,11 +153,14 @@ fn init_rootfs_commands(
             "No repos defined, zypper will not be able to install anything"
         ));
     }
+    // we really should not need gettext-tools full but gettext-tools-mini pulls in this-is-only-for-build-envs
+    // which it shouldn't since the package "this-is-only-for-build-envs" is a obs specific attribute
+    // used to show a package is only need for build time... not sure if its the repos or some haunting bs
     let commands = format!(
         "
         #!/bin/bash -x
         {repo_commands}
-        zypper --root /newroot in --no-recommends -y filesystem udev
+        zypper --root /newroot in --no-recommends -y filesystem udev gettext-tools
         zypper --root /newroot in --no-recommends -y -t pattern devel_basis
         zypper --root /newroot in --no-recommends -y {}
         mkdir -p /home/build/out
