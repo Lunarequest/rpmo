@@ -66,7 +66,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     )?;
 
     // set up env with build dependencies
-    run_init(buildroot_path, &init_file)?;
+    run_init(buildroot_path, &init_file).await?;
     fetch_sources(buildhome_path, &build_instructions.package.sources).await?;
     let piplines = build_instructions.pipeline.clone();
     for pipline in piplines {
