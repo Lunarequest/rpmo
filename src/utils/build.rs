@@ -1,17 +1,16 @@
+use anyhow::{anyhow, Result};
+use serde::Serialize;
+use serde_yaml::from_reader;
 use std::{
     env::consts::ARCH,
     fs::{create_dir_all, metadata, set_permissions, File},
     io::{self, prelude::Write},
     os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
-    process::Command,
     thread::sleep,
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
-use serde::Serialize;
-use serde_yaml::from_reader;
 use tempfile::{Builder, TempDir};
 use tera::{Context, Tera};
 
@@ -20,6 +19,7 @@ use crate::{
     build_instructions::{Manifest, Pipeline},
     utils::pack::pack,
 };
+use tokio::{process::Command, select, signal::ctrl_c};
 
 #[derive(Debug, Serialize)]
 pub struct Target {
@@ -75,7 +75,8 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
             buildhome_path.to_path_buf(),
             pipline,
             build_instructions.clone(),
-        )?;
+        )
+        .await?;
     }
 
     pack(buildhome_path.join("out").to_path_buf(), build_instructions)?;
@@ -88,7 +89,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
     Ok(PathBuf::new())
 }
 
-fn spawn_pipeline_run(
+async fn spawn_pipeline_run(
     root: PathBuf,
     home: PathBuf,
     pipline: Pipeline,
@@ -115,7 +116,7 @@ fn spawn_pipeline_run(
     file.write_all(run.as_bytes())?;
 
     #[rustfmt::skip]
-    let status = Command::new("bwrap").args(vec![
+    let mut bwrap = Command::new("bwrap").args(vec![
         "--bind", &buildroot, "/",
         "--bind", &buildhome, "/home/build",
         "--unshare-pid",
@@ -128,12 +129,23 @@ fn spawn_pipeline_run(
         "--setenv", "HOME", "/home/build",
         "--setenv", "PATH", "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
         "/bin/bash", "-x", &format!("{}.sh", name)
-    ]).status()?;
+    ]).spawn()?;
 
-    if status.success() {
-        Ok(())
-    } else {
-        Err(anyhow!("build failure"))
+    select! {
+        status = bwrap.wait() => {
+            let status = status?;
+            if status.success() {
+                Ok(())
+            } else {
+                Err(anyhow!("build failure"))
+            }
+        }
+
+        _ = ctrl_c() => {
+             println!("Ctrl+C received, killing build process");
+             let _ = bwrap.kill().await;
+             Err(anyhow!("Interrupted by Ctrl+C"))
+        }
     }
 }
 
