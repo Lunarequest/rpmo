@@ -14,14 +14,21 @@ use rand::{
     distr::{Alphanumeric, SampleString},
     rng,
 };
-use std::path::Path;
+use std::{fs::read_to_string, path::Path};
 use tokio::{select, signal::ctrl_c};
+
+fn selinux_enabled() -> bool {
+    match read_to_string("/sys/fs/selinux/enforce") {
+        Ok(content) => content.trim() == "1",
+        Err(_) => false,
+    }
+}
 
 pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
     let path = path.as_ref().to_str().context("path was not kosher")?;
     let init_file = file_path.as_ref().to_str().context("path was not kosher")?;
 
-    let host_config = HostConfig {
+    let mut host_config = HostConfig {
         binds: Some(vec![
             format!("{path}:/newroot:z"),
             format!("{init_file}:/init.sh:z"),
@@ -29,6 +36,10 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
         cap_add: Some(vec!["CAP_SYS_CHROOT".into()]),
         ..Default::default()
     };
+
+    if selinux_enabled() {
+        host_config.security_opt = Some(vec!["label=disable".into()]);
+    }
 
     let container_body = ContainerCreateBody {
         attach_stdin: Some(false),
