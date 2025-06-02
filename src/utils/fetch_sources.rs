@@ -24,7 +24,7 @@ async fn fetch_a_source(buildhome: &Path, url: &str) -> Result<()> {
         .url()
         .path_segments()
         .expect("No filename in URL?")
-        .last()
+        .next_back()
         .expect("No filename in URL?");
     path.push(url_last);
     println!("Download {} to {}", url, path.to_str().unwrap());

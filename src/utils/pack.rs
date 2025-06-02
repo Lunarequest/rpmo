@@ -13,19 +13,14 @@ use walkdir::WalkDir;
 pub fn analyis_file(path: impl AsRef<Path>) -> HashSet<String> {
     let mut deps = HashSet::new();
     if let Ok(buffer) = read(path) {
-        if let Ok(obj) = Object::parse(&buffer) {
-            match obj {
-                Object::Elf(elf) => {
-                    for lib in elf.libraries {
-                        deps.insert(lib.into());
-                    }
-                }
-                _ => {}
+        if let Ok(Object::Elf(elf)) = Object::parse(&buffer) {
+            for lib in elf.libraries {
+                deps.insert(lib.into());
             }
         }
     }
 
-    return deps;
+    deps
 }
 
 pub fn pack(path: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Path>> {
