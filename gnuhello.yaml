@@ -19,10 +19,11 @@ environment:
     - tar
 pipeline:
   - name: unpack
-    runs: tar xvf {{manifest.package.name}}-{{manifest.package.version}}.tar.gz
-  - name: Configure hello
-    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && ./configure --prefix=/usr
-  - name: make
-    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && make
-  - name: install
-    runs: cd {{manifest.package.name}}-{{manifest.package.version}} && make install DESTDIR=../out
+    runs:
+      - tar xvf {{manifest.package.name}}-{{manifest.package.version}}.tar.gz
+  - name: hello
+    runs:
+      - cd {{manifest.package.name}}-{{manifest.package.version}}
+      - ./configure --prefix=/usr
+      - make
+      - make install DESTDIR=../out

@@ -17,7 +17,7 @@ pub struct Environment {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Pipeline {
     pub name: String,
-    pub runs: String,
+    pub runs: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

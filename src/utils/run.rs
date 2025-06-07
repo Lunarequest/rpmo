@@ -1,3 +1,4 @@
+use crate::utils::selinux_enabled;
 use anyhow::{anyhow, Context, Result};
 use bollard::{
     container::LogOutput,
@@ -14,15 +15,8 @@ use rand::{
     distr::{Alphanumeric, SampleString},
     rng,
 };
-use std::{fs::read_to_string, path::Path};
+use std::path::Path;
 use tokio::{select, signal::ctrl_c};
-
-fn selinux_enabled() -> bool {
-    match read_to_string("/sys/fs/selinux/enforce") {
-        Ok(content) => content.trim() == "1",
-        Err(_) => false,
-    }
-}
 
 pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
     let path = path.as_ref().to_str().context("path was not kosher")?;
@@ -30,8 +24,8 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
 
     let mut host_config = HostConfig {
         binds: Some(vec![
-            format!("{path}:/newroot:z"),
-            format!("{init_file}:/init.sh:z"),
+            format!("{path}:/newroot"),
+            format!("{init_file}:/init.sh"),
         ]),
         cap_add: Some(vec!["CAP_SYS_CHROOT".into()]),
         ..Default::default()

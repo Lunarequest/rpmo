@@ -17,7 +17,7 @@ use tera::{Context, Tera};
 use super::{fetch_sources::fetch_sources, run::run_init};
 use crate::{
     build_instructions::{Manifest, Pipeline},
-    utils::pack::pack,
+    utils::{pack::pack, selinux_enabled},
 };
 use tokio::{process::Command, select, signal::ctrl_c};
 
@@ -105,7 +105,7 @@ async fn spawn_pipeline_run(
     };
 
     let mut tera = Tera::default();
-    tera.add_raw_template(name, &pipline.runs)?;
+    tera.add_raw_template(name, &pipline.runs.join("\n"))?;
     let mut context = Context::new();
     context.insert("manifest", &manifest);
     context.insert("targets", &target);
@@ -156,7 +156,7 @@ fn init_rootfs_commands(
 ) -> Result<PathBuf> {
     let mut repo_commands = String::new();
     for repo in repos {
-        let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
+        let ar = format!("zypper  --root /newroot ar -f {}\n", repo);
         repo_commands = repo_commands + &ar;
     }
 
@@ -165,6 +165,13 @@ fn init_rootfs_commands(
             "No repos defined, zypper will not be able to install anything"
         ));
     }
+
+    repo_commands += "zypper --root /newroot --gpg-auto-import-keys refresh\n";
+
+    if selinux_enabled() {
+        repo_commands += "export LIBSEMANAGE_ASSUME_NOSELINUX=1\n";
+    }
+
     // we really should not need gettext-tools full but gettext-tools-mini pulls in this-is-only-for-build-envs
     // which it shouldn't since the package "this-is-only-for-build-envs" is a obs specific attribute
     // used to show a package is only need for build time... not sure if its the repos or some haunting bs
