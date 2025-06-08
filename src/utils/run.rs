@@ -27,13 +27,15 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
             format!("{path}:/newroot"),
             format!("{init_file}:/init.sh"),
         ]),
-        cap_add: Some(vec!["CAP_SYS_CHROOT".into()]),
+        cap_add: Some(vec!["CAP_SYS_CHROOT".into(), "SYS_ADMIN".into()]),
         ..Default::default()
     };
 
+    let mut security_opt = vec!["unmask=/proc/*".to_string()];
     if selinux_enabled() {
-        host_config.security_opt = Some(vec!["label=disable".into()]);
+        security_opt.push("label=disable".into());
     }
+    host_config.security_opt = Some(security_opt);
 
     let container_body = ContainerCreateBody {
         attach_stdin: Some(false),

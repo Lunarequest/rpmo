@@ -79,7 +79,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         .await?;
     }
 
-    pack(buildhome_path.join("out").to_path_buf(), build_instructions)?;
+    pack(buildhome_path, build_instructions)?;
 
     // FOR DEBUGGING
     println!("Eepy time😴");
@@ -178,6 +178,8 @@ fn init_rootfs_commands(
     let commands = format!(
         "
         #!/bin/bash -x
+        mkdir -p /newroot/proc
+        mount --bind /proc /newroot/proc
         {repo_commands}
         zypper --root /newroot in --no-recommends -y filesystem udev gettext-tools
         zypper --root /newroot in --no-recommends -y -t pattern devel_basis

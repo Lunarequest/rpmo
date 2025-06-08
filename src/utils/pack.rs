@@ -19,12 +19,12 @@ pub fn analyis_file(path: impl AsRef<Path>) -> HashSet<String> {
             }
         }
     }
-
+    println!("{:#?}", deps);
     deps
 }
 
-pub fn pack(path: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Path>> {
-    let root = path.as_ref().to_string_lossy().to_string();
+pub fn pack(buildroot: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Path>> {
+    let path = buildroot.as_ref().to_path_buf().join("out");
     let mut license = String::new();
     for copyright in manifest.package.copyright {
         if license.is_empty() {
@@ -42,16 +42,18 @@ pub fn pack(path: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Pat
         ARCH,
         &manifest.package.description,
     )
-    .compression(CompressionWithLevel::Zstd(19));
+    .release(manifest.package.release.to_string())
+    .compression(CompressionWithLevel::Zstd(3));
 
     let mut deps: HashSet<String> = HashSet::new();
 
-    for entry in WalkDir::new(path) {
+    for entry in WalkDir::new(&path) {
         match entry {
             Err(e) => eprintln!("{}", e),
             Ok(dir_ent) => {
                 let real_loc = dir_ent.path();
-                let relative_location = real_loc.to_string_lossy().replace(&root, "/");
+                let p = real_loc.strip_prefix(&path).unwrap().to_string_lossy();
+                let relative_location = format!("/{p}");
                 if !real_loc.is_dir() {
                     let file_deps = analyis_file(real_loc);
                     rpm = rpm
@@ -71,6 +73,8 @@ pub fn pack(path: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRef<Pat
     }
 
     let pkg = rpm.build().expect("failed to build rpm");
+
+    println!("{:#?}", pkg.metadata);
 
     pkg.write_file(format!(
         "{}-{}-{}.rpm",
