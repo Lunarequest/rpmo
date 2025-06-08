@@ -2558,6 +2558,7 @@ dependencies = [
  "reqwest",
  "rpm",
  "serde",
+ "serde_json",
  "serde_yaml",
  "tempfile",
  "tera",
@@ -2927,7 +2928,9 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 name = "so_to_dep"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
+ "regex",
  "serde",
  "serde_json",
  "tokio",

@@ -7,4 +7,6 @@ edition = "2024"
 tokio = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true }
-serde_json = { version = "1.0.140" }
+serde_json = { workspace = true }
+regex = "1.11.1"
+anyhow = { workspace = true }

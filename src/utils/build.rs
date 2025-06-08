@@ -79,7 +79,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         .await?;
     }
 
-    pack(buildhome_path, build_instructions)?;
+    pack(buildroot_path, buildhome_path, build_instructions).await?;
 
     // FOR DEBUGGING
     println!("Eepy time😴");
