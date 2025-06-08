@@ -74,7 +74,7 @@ pub fn pack(buildroot: impl AsRef<Path>, manifest: Manifest) -> Result<impl AsRe
 
     let pkg = rpm.build().expect("failed to build rpm");
 
-    println!("{:#?}", pkg.metadata);
+    //println!("{:#?}", pkg.metadata);
 
     pkg.write_file(format!(
         "{}-{}-{}.rpm",

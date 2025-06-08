@@ -1,0 +1,10 @@
+[package]
+name = "so_to_dep"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { version = "1.0.140" }
