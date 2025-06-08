@@ -7,9 +7,10 @@ use std::{
     io::{self, prelude::Write},
     os::unix::prelude::PermissionsExt,
     path::{Path, PathBuf},
-    thread::sleep,
-    time::Duration,
 };
+
+#[cfg(debug_assertions)]
+use std::{thread::sleep, time::Duration};
 
 use tempfile::{Builder, TempDir};
 use tera::{Context, Tera};
@@ -81,10 +82,13 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
 
     pack(buildroot_path, buildhome_path, build_instructions).await?;
 
-    // FOR DEBUGGING
-    println!("Eepy time😴");
-    let duration = Duration::from_secs(60);
-    sleep(duration);
+    #[cfg(debug_assertions)]
+    {
+        // FOR DEBUGGING
+        println!("Eepy time😴");
+        let duration = Duration::from_secs(60);
+        sleep(duration);
+    }
 
     Ok(PathBuf::new())
 }
@@ -97,7 +101,7 @@ async fn spawn_pipeline_run(
 ) -> Result<()> {
     let buildroot = root.to_string_lossy().to_string();
     let buildhome = home.to_string_lossy().to_string();
-    println!("{buildhome}");
+
     let name = &pipline.name.replace(' ', "");
     let target = Target {
         destdir: "/home/build/out".to_string(),
@@ -116,7 +120,7 @@ async fn spawn_pipeline_run(
     file.write_all(run.as_bytes())?;
 
     #[rustfmt::skip]
-    let mut bwrap = Command::new("bwrap").args(vec![
+    let mut bwrap = Command::new("bwrap").args(&[
         "--bind", &buildroot, "/",
         "--bind", &buildhome, "/home/build",
         "--unshare-pid",

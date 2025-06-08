@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
             if let Some(caps) = re.captures(line) {
                 let cap = caps[0].split("=>").last().context("e")?;
                 let rpm = Command::new("rpm")
-                    .args(vec!["-q", "--whatprovides"])
+                    .args(&["-q", "--whatprovides"])
                     .arg(cap.trim())
                     .output()
                     .await

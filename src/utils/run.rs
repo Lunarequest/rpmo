@@ -3,24 +3,83 @@ use anyhow::{anyhow, Context, Result};
 use bollard::{
     container::LogOutput,
     query_parameters::{
-        AttachContainerOptionsBuilder, CreateContainerOptionsBuilder,
+        AttachContainerOptionsBuilder, CreateContainerOptionsBuilder, CreateImageOptionsBuilder,
         RemoveContainerOptionsBuilder, StartContainerOptionsBuilder, StopContainerOptionsBuilder,
         WaitContainerOptionsBuilder,
     },
-    secret::{ContainerCreateBody, HostConfig},
+    secret::{ContainerCreateBody, CreateImageInfo, HostConfig},
     Docker, API_DEFAULT_VERSION,
 };
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt, TryStreamExt};
 use rand::{
     distr::{Alphanumeric, SampleString},
     rng,
 };
 use std::path::Path;
-use tokio::{select, signal::ctrl_c};
+use tokio::{select, signal};
 
 pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
     let path = path.as_ref().to_str().context("path was not kosher")?;
     let init_file = file_path.as_ref().to_str().context("path was not kosher")?;
+    let image = "registry.opensuse.org/opensuse/tumbleweed:latest";
+
+    let api = Docker::connect_with_unix(
+        "/run/user/1000/podman/podman.sock",
+        120,
+        API_DEFAULT_VERSION,
+    )
+    .context("Failed to contect to podman api")?;
+
+    let ctrl_c = signal::ctrl_c().fuse();
+
+    let create_image_options = CreateImageOptionsBuilder::new().from_image(image).build();
+
+    let mut stream = api
+        .create_image(Some(create_image_options), None, None)
+        .fuse();
+
+    select! {
+        maybe_output = stream.try_next() => {
+                match maybe_output {
+                    Ok(Some(CreateImageInfo {
+                        status: Some(status),
+                        progress: Some(progress),
+                        id,
+                        ..
+                    })) => {
+                        if let Some(id) = id {
+                            println!("{:>20}: {:<15} {}", id, status, progress);
+                        } else {
+                            println!("{:<15} {}", status, progress);
+                        }
+                    },
+                    Ok(Some(CreateImageInfo {
+                        status: Some(status),
+                        id,
+                        ..
+                    })) => {
+                        if let Some(id) = id {
+                            println!("{:>20}: {}", id, status);
+                        } else {
+                            println!("{}", status);
+                        }
+                    },
+                    Ok(Some(CreateImageInfo {status: None, ..})) => { println!("how did you get here")},
+                    Ok(None) => {
+                        println!("\nPull complete.");
+                    },
+                    Err(e) => {
+                        return Err(anyhow!("Error pulling image: {}", e));
+                    }
+                }
+            }
+
+        _ = ctrl_c => {
+            println!("\nPull canceled by user.");
+
+            return Err(anyhow!("Interrupted by Ctrl+C"));
+        }
+    }
 
     let mut host_config = HostConfig {
         binds: Some(vec![
@@ -43,20 +102,13 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
         attach_stderr: Some(true),
         tty: Some(true),
         cmd: Some(vec!["/bin/bash".into(), "-x".into(), "/init.sh".into()]),
-        image: Some("registry.opensuse.org/opensuse/tumbleweed:latest".into()),
+        image: Some(image.into()),
         host_config: Some(host_config),
         ..Default::default()
     };
 
     let short_rng = Alphanumeric.sample_string(&mut rng(), 8);
     let container_name = format!("build-container-{short_rng}");
-
-    let api = Docker::connect_with_unix(
-        "/run/user/1000/podman/podman.sock",
-        120,
-        API_DEFAULT_VERSION,
-    )
-    .context("Failed to contect to podman api")?;
 
     api.create_container(
         Some(
@@ -126,7 +178,7 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
             // Container exited normally
         }
 
-        _ = ctrl_c() => {
+        _ = signal::ctrl_c() => {
             eprintln!("\nCtrl+C received. Stopping container...");
             let stop_container_opts = StopContainerOptionsBuilder::new().signal("SIGKILL").build();
             api
