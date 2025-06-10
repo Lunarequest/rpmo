@@ -93,7 +93,7 @@ pub async fn pack(
         &manifest.package.description,
     )
     .release(manifest.package.release.to_string())
-    .compression(CompressionWithLevel::Zstd(3));
+    .compression(CompressionWithLevel::Zstd(19));
 
     let mut deps: HashSet<String> = HashSet::new();
 
