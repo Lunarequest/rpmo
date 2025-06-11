@@ -8,7 +8,7 @@ use bollard::{
         WaitContainerOptionsBuilder,
     },
     secret::{ContainerCreateBody, CreateImageInfo, HostConfig},
-    Docker, API_DEFAULT_VERSION,
+    Docker,
 };
 use futures::{FutureExt, StreamExt, TryStreamExt};
 use rand::{
@@ -23,12 +23,7 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
     let init_file = file_path.as_ref().to_str().context("path was not kosher")?;
     let image = "registry.opensuse.org/opensuse/tumbleweed:latest";
 
-    let api = Docker::connect_with_unix(
-        "/run/user/1000/podman/podman.sock",
-        120,
-        API_DEFAULT_VERSION,
-    )
-    .context("Failed to contect to podman api")?;
+    let api = Docker::connect_with_defaults().context("Failed to contect to podman api")?;
 
     let ctrl_c = signal::ctrl_c().fuse();
 
@@ -171,7 +166,6 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
                         result.status_code
                     ));
                 }
-
             }
             Ok(())
         } => {
