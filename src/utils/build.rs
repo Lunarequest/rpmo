@@ -17,7 +17,7 @@ use tera::{Context, Tera};
 
 use super::{fetch_sources::fetch_sources, run::run_init};
 use crate::{
-    build_instructions::{Manifest, Pipeline},
+    mainfest::{Manifest, Pipeline},
     utils::{pack::pack, selinux_enabled},
 };
 use tokio::{process::Command, select, signal::ctrl_c};

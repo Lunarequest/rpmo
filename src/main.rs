@@ -1,5 +1,5 @@
-mod build_instructions;
 mod cli;
+mod mainfest;
 mod utils;
 use anyhow::Result;
 use clap::Parser;

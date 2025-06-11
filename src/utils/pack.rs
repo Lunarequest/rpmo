@@ -1,4 +1,4 @@
-use crate::build_instructions::Manifest;
+use crate::mainfest::Manifest;
 use anyhow::{anyhow, Context, Result};
 use goblin::Object;
 use rpm::{CompressionWithLevel, Dependency, FileOptions, PackageBuilder};
