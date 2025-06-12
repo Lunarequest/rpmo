@@ -99,6 +99,11 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
         cmd: Some(vec!["/bin/bash".into(), "-x".into(), "/init.sh".into()]),
         image: Some(image.into()),
         host_config: Some(host_config),
+        env: Some(vec![
+            "ZYPP_PCK_PRELOAD=1".to_string(),
+            "ZYPP_CURL2=1".to_string(),
+            "ZYPP_SINGLE_RPMTRANS=1".to_string(),
+        ]),
         ..Default::default()
     };
 
