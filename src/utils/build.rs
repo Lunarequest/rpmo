@@ -2,7 +2,12 @@ use anyhow::{anyhow, Result};
 use serde::Serialize;
 use serde_yaml::from_reader;
 use std::{
-    collections::HashMap, env::consts::ARCH, fmt::format, fs::{create_dir_all, metadata, set_permissions, File}, io::{self, prelude::Write}, os::unix::prelude::PermissionsExt, path::{Path, PathBuf}
+    collections::HashMap,
+    env::consts::ARCH,
+    fs::{create_dir_all, metadata, set_permissions, File},
+    io::{self, prelude::Write},
+    os::unix::prelude::PermissionsExt,
+    path::{Path, PathBuf},
 };
 
 #[cfg(debug_assertions)]
@@ -55,13 +60,15 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         None => build_instructions.environment.packages.clone(),
     };
     packages.dedup();
-    let mut outdirs = format!("{},",build_instructions.package.name);
+    let mut outdirs = format!("{},", build_instructions.package.name);
     let mut subpkgs: Vec<String> = vec![];
 
     if let Some(subpackages) = &build_instructions.package.subpackages {
         for subpkg in subpackages {
-            subpkgs.push(format!("{}-{}",build_instructions.package.name, &subpkg.name));
-
+            subpkgs.push(format!(
+                "{}-{}",
+                build_instructions.package.name, &subpkg.name
+            ));
         }
         outdirs += &subpkgs.join(",");
     }
@@ -70,7 +77,7 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         initfile_path,
         packages,
         build_instructions.environment.repositories.clone(),
-        outdirs
+        outdirs,
     )?;
 
     // set up env with build dependencies
@@ -87,11 +94,27 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         .await?;
     }
 
-    pack(buildroot_path, buildhome_path, &build_instructions, &build_instructions.package.name, &build_instructions.package.version, &build_instructions.package.release).await?;
+    pack(
+        buildroot_path,
+        buildhome_path,
+        &build_instructions,
+        &build_instructions.package.name,
+        &build_instructions.package.version,
+        &build_instructions.package.release,
+    )
+    .await?;
     if let Some(subpkg) = &build_instructions.package.subpackages {
-    for pkg in subpkg  {
-        pack(buildroot_path, buildhome_path, &build_instructions, &pkg.name, &pkg.version, &pkg.release).await?;
-    }
+        for pkg in subpkg {
+            pack(
+                buildroot_path,
+                buildhome_path,
+                &build_instructions,
+                &pkg.name,
+                &pkg.version,
+                &pkg.release,
+            )
+            .await?;
+        }
     }
 
     #[cfg(debug_assertions)]
@@ -117,22 +140,25 @@ async fn spawn_pipeline_run(
     let name = &pipline.name.replace(' ', "");
     let mut target: HashMap<&str, Target> = HashMap::new();
 
-    target.insert(&manifest.package.name, 
-    Target {
-        destdir: format!("/home/build/out/{}", &manifest.package.name),
-        arch: ARCH,
-    });
-
+    target.insert(
+        &manifest.package.name,
+        Target {
+            destdir: format!("/home/build/out/{}", &manifest.package.name),
+            arch: ARCH,
+        },
+    );
 
     if let Some(subpackages) = &manifest.package.subpackages {
         for subpkg in subpackages {
-            target.insert(&subpkg.name, Target {
-                destdir: format!("/home/build/out/{}", subpkg.name), 
-                arch: ARCH
-            });
+            target.insert(
+                &subpkg.name,
+                Target {
+                    destdir: format!("/home/build/out/{}", subpkg.name),
+                    arch: ARCH,
+                },
+            );
         }
     }
-
 
     let mut tera = Tera::default();
     tera.add_raw_template(name, &pipline.runs.join("\n"))?;

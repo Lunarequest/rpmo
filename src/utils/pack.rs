@@ -70,9 +70,13 @@ pub async fn pack(
     manifest: &Manifest,
     pkgname: impl AsRef<str> + Display,
     version: impl AsRef<str> + Display,
-    release: &u32
+    release: &u32,
 ) -> Result<impl AsRef<Path>> {
-    let path = buildhome.as_ref().to_path_buf().join("out").join(pkgname.as_ref());
+    let path = buildhome
+        .as_ref()
+        .to_path_buf()
+        .join("out")
+        .join(pkgname.as_ref());
     let current_path = current_exe()?;
     let so_to_dep = current_path
         .parent()
@@ -163,7 +167,9 @@ pub async fn pack(
 
     pkg.write_file(format!(
         "{}-{}-{}-{ARCH}.rpm",
-        pkgname.as_ref(), version.as_ref(), release
+        pkgname.as_ref(),
+        version.as_ref(),
+        release
     ))
     .expect("failed to write rpm");
 
