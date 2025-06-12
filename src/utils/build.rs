@@ -146,7 +146,7 @@ async fn spawn_pipeline_run(
     file.write_all(run.as_bytes())?;
 
     #[rustfmt::skip]
-    let mut bwrap = Command::new("bwrap").args(&[
+    let mut bwrap = Command::new("bwrap").args([
         "--bind", &buildroot, "/",
         "--bind", &buildhome, "/home/build",
         "--unshare-pid",

@@ -126,7 +126,7 @@ pub async fn pack(
         let input = Input { so: deps };
 
         #[rustfmt::skip]
-        let bwrap = Command::new("bwrap").args(&[
+        let bwrap = Command::new("bwrap").args([
             "--bind", buildroot.as_ref().to_str().unwrap(), "/",
             "--bind", so_to_dep.to_str().unwrap(), "/usr/bin/so_to_dep",
             "--unshare-pid",
@@ -151,7 +151,7 @@ pub async fn pack(
         let output = String::from_utf8_lossy(&bwrap.stdout);
 
         let out: Output =
-            from_str(&output.trim()).context("failed to deserialise so_to_dep output")?;
+            from_str(output.trim()).context("failed to deserialise so_to_dep output")?;
 
         for lib in out.libraries {
             if let Some(dependancy) = rpm_to_version(&lib) {
