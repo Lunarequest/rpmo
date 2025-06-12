@@ -29,6 +29,18 @@ pub struct Package {
     pub copyright: Vec<CopyRight>,
     pub dependecies: Option<Vec<String>>,
     pub sources: Vec<String>,
+    pub subpackages: Option<Vec<SubPackage>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SubPackage {
+    pub name: String,
+    pub version: String,
+    pub release: u32,
+    pub description: String,
+    pub copyright: Vec<CopyRight>,
+    pub dependecies: Option<Vec<String>>,
+    pub sources: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

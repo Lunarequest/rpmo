@@ -5,6 +5,7 @@ use rpm::{CompressionWithLevel, Dependency, FileOptions, PackageBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 use std::collections::HashSet;
+use std::fmt::Display;
 use std::{
     env::consts::ARCH,
     env::current_exe,
@@ -66,9 +67,12 @@ fn rpm_to_version(name: impl AsRef<str>) -> Option<(String, String)> {
 pub async fn pack(
     buildroot: impl AsRef<Path>,
     buildhome: impl AsRef<Path>,
-    manifest: Manifest,
+    manifest: &Manifest,
+    pkgname: impl AsRef<str> + Display,
+    version: impl AsRef<str> + Display,
+    release: &u32
 ) -> Result<impl AsRef<Path>> {
-    let path = buildhome.as_ref().to_path_buf().join("out");
+    let path = buildhome.as_ref().to_path_buf().join("out").join(pkgname.as_ref());
     let current_path = current_exe()?;
     let so_to_dep = current_path
         .parent()
@@ -76,7 +80,7 @@ pub async fn pack(
         .join("so_to_dep");
 
     let mut license = String::new();
-    for copyright in manifest.package.copyright {
+    for copyright in &manifest.package.copyright {
         if license.is_empty() {
             license = license + &copyright.license;
         } else {
@@ -86,8 +90,8 @@ pub async fn pack(
     }
 
     let mut rpm = PackageBuilder::new(
-        &manifest.package.name,
-        &manifest.package.version,
+        pkgname.as_ref(),
+        version.as_ref(),
         &license,
         ARCH,
         &manifest.package.description,
@@ -158,8 +162,8 @@ pub async fn pack(
     let pkg = rpm.build().expect("failed to build rpm");
 
     pkg.write_file(format!(
-        "{}-{}-{}.rpm",
-        manifest.package.name, manifest.package.version, manifest.package.release
+        "{}-{}-{}-{ARCH}.rpm",
+        pkgname.as_ref(), version.as_ref(), release
     ))
     .expect("failed to write rpm");
 

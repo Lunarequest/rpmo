@@ -26,4 +26,4 @@ pipeline:
       - cd {{manifest.package.name}}-{{manifest.package.version}}
       - ./configure --prefix=/usr
       - make
-      - make install DESTDIR=../out
+      - make install DESTDIR={{targets.hello.destdir}}

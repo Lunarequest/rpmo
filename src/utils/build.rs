@@ -2,11 +2,7 @@ use anyhow::{anyhow, Result};
 use serde::Serialize;
 use serde_yaml::from_reader;
 use std::{
-    env::consts::ARCH,
-    fs::{create_dir_all, metadata, set_permissions, File},
-    io::{self, prelude::Write},
-    os::unix::prelude::PermissionsExt,
-    path::{Path, PathBuf},
+    collections::HashMap, env::consts::ARCH, fmt::format, fs::{create_dir_all, metadata, set_permissions, File}, io::{self, prelude::Write}, os::unix::prelude::PermissionsExt, path::{Path, PathBuf}
 };
 
 #[cfg(debug_assertions)]
@@ -25,7 +21,7 @@ use tokio::{process::Command, select, signal::ctrl_c};
 #[derive(Debug, Serialize)]
 pub struct Target {
     destdir: String,
-    arch: String,
+    arch: &'static str,
 }
 
 fn new_tmp_dir<T: AsRef<std::ffi::OsStr>>(prefix: T) -> io::Result<TempDir> {
@@ -59,11 +55,22 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         None => build_instructions.environment.packages.clone(),
     };
     packages.dedup();
+    let mut outdirs = format!("{},",build_instructions.package.name);
+    let mut subpkgs: Vec<String> = vec![];
+
+    if let Some(subpackages) = &build_instructions.package.subpackages {
+        for subpkg in subpackages {
+            subpkgs.push(format!("{}-{}",build_instructions.package.name, &subpkg.name));
+
+        }
+        outdirs += &subpkgs.join(",");
+    }
 
     let init_file = init_rootfs_commands(
         initfile_path,
         packages,
         build_instructions.environment.repositories.clone(),
+        outdirs
     )?;
 
     // set up env with build dependencies
@@ -80,7 +87,12 @@ pub async fn build(path: PathBuf) -> Result<PathBuf> {
         .await?;
     }
 
-    pack(buildroot_path, buildhome_path, build_instructions).await?;
+    pack(buildroot_path, buildhome_path, &build_instructions, &build_instructions.package.name, &build_instructions.package.version, &build_instructions.package.release).await?;
+    if let Some(subpkg) = &build_instructions.package.subpackages {
+    for pkg in subpkg  {
+        pack(buildroot_path, buildhome_path, &build_instructions, &pkg.name, &pkg.version, &pkg.release).await?;
+    }
+    }
 
     #[cfg(debug_assertions)]
     {
@@ -103,10 +115,24 @@ async fn spawn_pipeline_run(
     let buildhome = home.to_string_lossy().to_string();
 
     let name = &pipline.name.replace(' ', "");
-    let target = Target {
-        destdir: "/home/build/out".to_string(),
-        arch: ARCH.to_string(),
-    };
+    let mut target: HashMap<&str, Target> = HashMap::new();
+
+    target.insert(&manifest.package.name, 
+    Target {
+        destdir: format!("/home/build/out/{}", &manifest.package.name),
+        arch: ARCH,
+    });
+
+
+    if let Some(subpackages) = &manifest.package.subpackages {
+        for subpkg in subpackages {
+            target.insert(&subpkg.name, Target {
+                destdir: format!("/home/build/out/{}", subpkg.name), 
+                arch: ARCH
+            });
+        }
+    }
+
 
     let mut tera = Tera::default();
     tera.add_raw_template(name, &pipline.runs.join("\n"))?;
@@ -157,6 +183,7 @@ fn init_rootfs_commands(
     buildroot: &Path,
     packages: Vec<String>,
     repos: Vec<String>,
+    output_dirs: String,
 ) -> Result<PathBuf> {
     let mut repo_commands = String::new();
     for repo in repos {
@@ -188,7 +215,7 @@ fn init_rootfs_commands(
         zypper --root /newroot in --no-recommends -y filesystem udev gettext-tools
         zypper --root /newroot in --no-recommends -y -t pattern devel_basis
         zypper --root /newroot in --no-recommends -y {}
-        mkdir -p /home/build/out
+        mkdir -p /home/build/out/{{{output_dirs}}}
         ",
         packages.join(" ")
     );
