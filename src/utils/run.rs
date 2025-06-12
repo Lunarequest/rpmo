@@ -15,7 +15,10 @@ use rand::{
     distr::{Alphanumeric, SampleString},
     rng,
 };
-use std::path::Path;
+use std::{
+    io::{stderr, stdout, Write},
+    path::Path,
+};
 use tokio::{select, signal};
 
 pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
@@ -141,10 +144,19 @@ pub async fn run_init<T: AsRef<Path>>(path: T, file_path: T) -> Result<()> {
     tokio::spawn(async move {
         while let Some(Ok(output)) = output_stream.output.next().await {
             match output {
-                LogOutput::StdOut { message } => print!("{}", String::from_utf8_lossy(&message)),
-                LogOutput::StdErr { message } => eprint!("{}", String::from_utf8_lossy(&message)),
+                LogOutput::StdOut { message } => {
+                    let _ = stdout().write_all(&message);
+                    let _ = stdout().flush();
+                }
+                LogOutput::StdErr { message } => {
+                    let _ = stderr().write_all(&message);
+                    let _ = stderr().flush();
+                }
                 LogOutput::StdIn { .. } => {}
-                LogOutput::Console { message } => print!("{}", String::from_utf8_lossy(&message)),
+                LogOutput::Console { message } => {
+                    let _ = stdout().write_all(&message);
+                    let _ = stdout().flush();
+                }
             }
         }
     });
