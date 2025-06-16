@@ -166,7 +166,7 @@ pub async fn pack(
     let pkg = rpm.build().expect("failed to build rpm");
 
     pkg.write_file(format!(
-        "{}-{}-{}-{ARCH}.rpm",
+        "{}-{}-{}.{ARCH}.rpm",
         pkgname.as_ref(),
         version.as_ref(),
         release
