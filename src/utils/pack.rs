@@ -2,7 +2,6 @@ use crate::mainfest::Manifest;
 use anyhow::{anyhow, Context, Result};
 use goblin::Object;
 use rpm::{CompressionWithLevel, Dependency, FileOptions, PackageBuilder};
-use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 use std::collections::HashSet;
 use std::fmt::Display;
@@ -14,16 +13,7 @@ use std::{
 };
 use tokio::process::Command;
 use walkdir::WalkDir;
-
-#[derive(Debug, Serialize)]
-struct Input {
-    so: HashSet<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Output {
-    libraries: HashSet<String>,
-}
+use interop::{Input, Output};
 
 fn analysis_file(path: impl AsRef<Path>) -> HashSet<String> {
     let mut deps = HashSet::new();
@@ -103,7 +93,7 @@ pub async fn pack(
     .release(manifest.package.release.to_string())
     .compression(CompressionWithLevel::Zstd(19));
 
-    let mut deps: HashSet<String> = HashSet::new();
+    let mut deps: Vec<String> = Vec::new();
 
     for entry in WalkDir::new(&path) {
         match entry {
@@ -125,6 +115,8 @@ pub async fn pack(
             }
         }
     }
+
+    deps.dedup();
 
     if !deps.is_empty() {
         let input = Input { so: deps };
@@ -163,6 +155,23 @@ pub async fn pack(
             }
         }
     }
+    
+    if let Some(pre_install) = &manifest.package.pre_install {
+        rpm = rpm.pre_install_script(pre_install);
+    }
+
+    if let Some(post_install) = &manifest.package.post_install {
+        rpm = rpm.pre_install_script(post_install);
+    }
+
+    if let Some(pre_uninstall) = &manifest.package.pre_uninstall {
+     rpm = rpm.pre_install_script(pre_uninstall);
+    }
+    
+    if let Some(post_uninstall) = &manifest.package.post_uninstall {
+        rpm = rpm.pre_install_script(post_uninstall);
+    }
+    
     let pkg = rpm.build().expect("failed to build rpm");
 
     pkg.write_file(format!(

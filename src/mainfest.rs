@@ -30,6 +30,10 @@ pub struct Package {
     pub dependecies: Option<Vec<String>>,
     pub sources: Vec<String>,
     pub subpackages: Option<Vec<SubPackage>>,
+    pub pre_install: Option<String>,
+    pub post_install: Option<String>,
+    pub pre_uninstall: Option<String>,
+    pub post_uninstall: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

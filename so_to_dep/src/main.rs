@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use clap::Parser;
+use interop::{Input, Output};
 use regex::{Regex, escape};
-use serde::{Deserialize, Serialize};
 use serde_json::{from_str, to_string};
 use std::{
     collections::HashSet,
@@ -12,16 +12,6 @@ use tokio::process::Command;
 #[derive(Debug, Parser)]
 struct Cli {
     sos: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Input {
-    so: Vec<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct Output {
-    libraries: HashSet<String>,
 }
 
 #[tokio::main]
