@@ -184,7 +184,7 @@ async fn spawn_pipeline_run(
         "--setenv", "SOURCE_DATE_EPOCH", "0",
         "--setenv", "HOME", "/home/build",
         "--setenv", "PATH", "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
-        "/bin/bash", "-x", &format!("{}.sh", name)
+        "/bin/bash", "-ex", &format!("{}.sh", name)
     ]).spawn()?;
 
     select! {
@@ -234,7 +234,7 @@ fn init_rootfs_commands(
     // used to show a package is only need for build time... not sure if its the repos or some haunting bs
     let commands = format!(
         "
-        #!/bin/bash -x
+        #!/bin/bash -ex
         mkdir -p /newroot/proc
         mount --bind /proc /newroot/proc
         {repo_commands}
